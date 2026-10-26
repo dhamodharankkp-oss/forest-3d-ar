@@ -1,0 +1,1325 @@
+/* -------------------------------------------------------------
+   REVEAL THE HIDDEN FOREST - 3D HUD & INTERACTIVE STYLES
+   ------------------------------------------------------------- */
+
+:root {
+  --primary-emerald: #10b981;
+  --primary-glow: rgba(16, 185, 129, 0.5);
+  --accent-gold: #f59e0b;
+  --danger-red: #ef4444;
+  --dark-bg: rgba(12, 22, 16, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --text-main: #f0fdf4;
+  --text-muted: #94a3b8;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #061009;
+  font-family: var(--font-family);
+  color: var(--text-main);
+  cursor: default;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Atmospheric Daytime Vignette Overlay */
+.atmospheric-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle at center, transparent 75%, rgba(12, 32, 22, 0.28) 100%);
+}
+
+/* Binocular Overlay Effect */
+#binocular-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+  background: 
+    radial-gradient(circle at 35% 50%, transparent 180px, rgba(0, 0, 0, 0.96) 260px),
+    radial-gradient(circle at 65% 50%, transparent 180px, rgba(0, 0, 0, 0.96) 260px);
+}
+
+#binocular-overlay.active {
+  display: block;
+}
+
+.binocular-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 240px;
+  border-top: 1px dashed rgba(16, 185, 129, 0.5);
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.binocular-text {
+  position: absolute;
+  bottom: 25px;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--primary-emerald);
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+}
+
+/* Hover Tooltip that tracks cursor */
+#hover-tooltip {
+  position: absolute;
+  z-index: 85;
+  pointer-events: none;
+  background: rgba(10, 24, 15, 0.96);
+  border: 1.5px solid var(--primary-emerald);
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+  display: none;
+  transform: translate(15px, 15px);
+  white-space: nowrap;
+}
+
+#hover-tooltip.threat {
+  border-color: var(--danger-red);
+}
+
+/* Compass Ribbon at top center */
+#compass-container {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: var(--dark-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  padding: 8px 20px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+#compass-heading {
+  color: #fff;
+  font-family: monospace;
+  font-size: 1rem;
+}
+
+#reset-orientation-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.15));
+  border: 1px solid var(--primary-emerald);
+  color: #34d399;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#reset-orientation-btn:hover {
+  background: var(--primary-emerald);
+  color: #032b17;
+  transform: scale(1.04);
+}
+
+/* HUD Overlay */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: auto;
+}
+
+.brand-badge {
+  background: var(--dark-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 12px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.brand-badge h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-badge p {
+  font-size: 0.8rem;
+  color: var(--primary-emerald);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Quest Tracker */
+.quest-tracker {
+  background: var(--dark-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 14px 20px;
+  min-width: 260px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tracker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.tracker-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+  font-weight: 550;
+}
+
+.tracker-pill {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--primary-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.tracker-pill.threats {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.progress-bar-container {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.4s ease;
+}
+
+.progress-bar-fill.threats {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+/* Center Crosshair */
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 8;
+}
+
+.crosshair::before, .crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 2px;
+}
+
+.crosshair::before {
+  top: 8px;
+  left: -12px;
+  width: 42px;
+  height: 2px;
+}
+
+.crosshair::after {
+  top: -12px;
+  left: 8px;
+  width: 2px;
+  height: 42px;
+}
+
+.crosshair.hovered::before, .crosshair.hovered::after {
+  background: #10b981;
+  box-shadow: 0 0 14px #10b981;
+}
+
+.crosshair.hovered-threat::before, .crosshair.hovered-threat::after {
+  background: #ef4444;
+  box-shadow: 0 0 14px #ef4444;
+}
+
+.crosshair-dot {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Proximity Prompt (Directly Clickable with High Z-Index) */
+#inspect-prompt {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #032b17;
+  font-weight: 750;
+  font-size: 0.95rem;
+  padding: 12px 26px;
+  border-radius: 30px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 6px 26px rgba(16, 185, 129, 0.7);
+  animation: pulsePrompt 1.4s infinite alternate ease-in-out;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 50;
+  border: 1.5px solid #a7f3d0;
+}
+
+#inspect-prompt.threat-prompt {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  box-shadow: 0 6px 26px rgba(239, 68, 68, 0.7);
+  border-color: #fecaca;
+}
+
+@keyframes pulsePrompt {
+  0% { transform: translateX(-50%) scale(0.96); }
+  100% { transform: translateX(-50%) scale(1.04); }
+}
+
+/* Bottom Action Bar */
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.controls-hint {
+  background: var(--dark-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.key-tag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.hud-btn {
+  background: var(--dark-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.hud-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: var(--primary-emerald);
+}
+
+/* Field Journal Drawer / Modal (Top Z-Index: 9999) */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.80);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.open {
+  display: flex;
+  animation: fadeIn 0.25s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.journal-card {
+  background: #0d1a12;
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  border-radius: 20px;
+  max-width: 650px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(16, 185, 129, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.journal-card.threat-mode {
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(239, 68, 68, 0.25);
+}
+
+.journal-header {
+  position: relative;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), transparent);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.journal-card.threat-mode .journal-header {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.18), transparent);
+}
+
+.journal-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--glass-border);
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.journal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.badge-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--primary-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge.threat {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.journal-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.journal-subtitle {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.journal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.journal-image-box {
+  width: 100%;
+  height: 240px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  position: relative;
+  background: #050d08;
+}
+
+.journal-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.journal-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--primary-emerald);
+  margin-bottom: 6px;
+}
+
+.journal-card.threat-mode .journal-section-title {
+  color: #f87171;
+}
+
+.journal-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #d1fae5;
+}
+
+.journal-card.threat-mode .journal-text {
+  color: #fee2e2;
+}
+
+.journal-checklist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.checklist-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checklist-item.found {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.checklist-item.threat-found {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Start Screen */
+#start-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(13, 30, 20, 0.90), rgba(4, 12, 6, 0.98));
+  backdrop-filter: blur(12px);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.start-box {
+  max-width: 560px;
+  background: rgba(12, 24, 16, 0.94);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 24px;
+  padding: 36px 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.start-icon {
+  font-size: 3.2rem;
+  margin-bottom: 12px;
+}
+
+.start-box h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.start-box p {
+  color: #a7f3d0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 14px 34px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.6);
+}
+
+/* Mobile Virtual Joystick */
+#mobile-controls {
+  position: absolute;
+  bottom: 25px;
+  left: 25px;
+  z-index: 20;
+  display: none;
+  pointer-events: auto;
+}
+
+#joystick-base {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  position: relative;
+  touch-action: none;
+}
+
+#joystick-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.85);
+  position: absolute;
+  top: 35px;
+  left: 35px;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+  pointer-events: none;
+}
+
+#mobile-action-btn {
+  position: absolute;
+  bottom: 35px;
+  right: 25px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.9);
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  color: #032b17;
+  font-size: 1.6rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #hud {
+    padding: 10px 12px;
+  }
+
+  /* 1. TOP HEADER: Prevent collision between title and quest tracker */
+  .hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    gap: 8px;
+    position: relative;
+    z-index: 20;
+  }
+
+  .brand-badge {
+    padding: 8px 12px;
+    border-radius: 12px;
+    max-width: 48%;
+  }
+
+  .brand-badge h1 {
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-badge p {
+    display: none; /* Hide subtitle on mobile to give room */
+  }
+
+  .quest-tracker {
+    min-width: 140px;
+    max-width: 50%;
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
+  .quest-tracker .tracker-row {
+    font-size: 0.72rem;
+  }
+
+  .tracker-label {
+    font-size: 0.72rem;
+  }
+
+  .tracker-pill {
+    padding: 2px 7px;
+    font-size: 0.72rem;
+  }
+
+  /* 2. COMPASS: Position cleanly BELOW the header so it NEVER overlaps */
+  #compass-container {
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    gap: 8px;
+    z-index: 15;
+    background: rgba(12, 22, 16, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  #compass-heading {
+    font-size: 0.82rem;
+  }
+
+  #reset-orientation-btn {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+  }
+
+  /* 3. CONTROLS & BOTTOM BAR: Zero overlap with thumbs */
+  .controls-hint {
+    display: none;
+  }
+
+  .hud-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Float Action Buttons safely ABOVE the thumb zones */
+  .action-buttons {
+    position: absolute;
+    bottom: 135px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+    z-index: 25;
+    width: auto;
+    max-width: 96vw;
+    justify-content: center;
+  }
+
+  .hud-btn {
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: rgba(12, 24, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Left Thumb Zone: Joystick */
+  #mobile-controls {
+    display: flex;
+    bottom: 25px;
+    left: 20px;
+    z-index: 30;
+    pointer-events: auto;
+  }
+
+  #joystick-base {
+    width: 105px;
+    height: 105px;
+  }
+
+  #joystick-knob {
+    width: 44px;
+    height: 44px;
+    top: 30px;
+    left: 30px;
+  }
+
+  /* Right Thumb Zone: Action Button */
+  #mobile-action-btn {
+    display: flex;
+    bottom: 25px;
+    right: 20px;
+    width: 65px;
+    height: 65px;
+    font-size: 1.5rem;
+    z-index: 30;
+    pointer-events: auto;
+  }
+}
+
+/* -------------------------------------------------------------
+   LIVE IN-BROWSER CAMERA AR STYLES (FAILSAFE)
+   ------------------------------------------------------------- */
+#browser-ar-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.bar-top-ribbon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.bar-badge {
+  background: rgba(5, 150, 105, 0.85);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.bar-exit-btn {
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+}
+
+.bar-exit-btn:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.bar-bottom-ribbon {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+  margin-bottom: 8px;
+}
+
+.bar-btn {
+  background: rgba(12, 26, 18, 0.88);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #f0fdf4;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.bar-btn:active {
+  transform: scale(0.96);
+}
+
+.bar-hint {
+  text-align: center;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 10px;
+  border-radius: 8px;
+  margin: 0 auto;
+  max-width: 90%;
+}
+
+.ar-ctrl-btn.camera-failsafe {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border: 1px solid #34d399;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);
+}
+
+.ar-ctrl-btn.camera-failsafe:hover {
+  filter: brightness(1.15);
+  transform: translateY(-2px);
+}
+
+/* -------------------------------------------------------------
+   GOOGLE ARCORE & WEBXR REALISTIC FOREST AR STYLES
+   ------------------------------------------------------------- */
+
+/* HUD AR Launch Button */
+.hud-btn.ar-hud-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(245, 158, 11, 0.25));
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  color: #fef08a;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+
+.hud-btn.ar-hud-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(245, 158, 11, 0.4));
+  border-color: #fbbf24;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Field Journal AR Action CTA */
+.journal-ar-cta {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.ar-launch-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #059669 0%, #d97706 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ar-launch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(217, 119, 6, 0.45);
+  filter: brightness(1.1);
+}
+
+.ar-launch-btn:active {
+  transform: translateY(0);
+}
+
+/* Checklist Small AR Pill Button */
+.checklist-ar-pill {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.checklist-ar-pill:hover {
+  background: rgba(16, 185, 129, 0.45);
+  border-color: #34d399;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.checklist-ar-pill.threat {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+.checklist-ar-pill.threat:hover {
+  background: rgba(239, 68, 68, 0.45);
+  color: #ffffff;
+}
+
+/* AR Experience Modal Card */
+.ar-card {
+  width: 90vw;
+  max-width: 860px;
+  max-height: 92vh;
+  background: rgba(9, 20, 14, 0.96);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ar-header-left h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #f0fdf4;
+  margin-top: 4px;
+}
+
+.ar-header-left p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.ar-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* 3D / AR Viewport */
+.ar-viewport-wrapper {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: radial-gradient(circle at center, rgba(16, 60, 36, 0.5) 0%, rgba(6, 16, 10, 0.95) 75%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+model-viewer#ar-viewer {
+  width: 100%;
+  height: 100%;
+  --poster-color: transparent;
+}
+
+/* AR Camera Button inside model-viewer */
+.ar-camera-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.ar-camera-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Habitat Overlay Indicator */
+.ar-habitat-overlay {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.ar-habitat-tag {
+  background: rgba(6, 24, 15, 0.75);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #6ee7b7;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+/* Controls Bar */
+.ar-controls-bar {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  background: rgba(12, 26, 18, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.ar-ctrl-btn {
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ar-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.ar-ctrl-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #a7f3d0;
+}
+
+.ar-ctrl-btn.tabletop-mode {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fde68a;
+}
+
+.ar-ctrl-btn.primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: transparent;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.ar-ctrl-btn.primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Desktop QR Code Panel */
+.ar-desktop-qr-box {
+  padding: 18px 24px 22px;
+  background: rgba(5, 14, 9, 0.85);
+  overflow-y: auto;
+}
+
+.qr-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.qr-code-img-wrap {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-code-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.qr-instructions h4 {
+  font-size: 0.95rem;
+  color: #f0fdf4;
+  margin-bottom: 4px;
+}
+
+.qr-instructions p {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.qr-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.qr-chips span {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .ar-viewport-wrapper {
+    height: 310px;
+  }
+  .ar-controls-bar {
+    flex-direction: column;
+    padding: 10px 14px;
+  }
+  .ar-ctrl-btn {
+    min-width: 100%;
+  }
+  .qr-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  .qr-chips {
+    justify-content: center;
+  }
+}

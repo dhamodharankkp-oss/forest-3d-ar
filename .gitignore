@@ -1,0 +1,7 @@
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log

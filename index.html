@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Reveal the Hidden Forest — 3D Expedition</title>
+  <meta name="description" content="Explore a spacious, realistic 3D forest world. Discover native wildlife species and uncover ecological threats.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌲</text></svg>">
+  <!-- Google Model Viewer for ARCore & WebXR AR -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+</head>
+<body>
+
+  <!-- WebGL Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Live Background Camera Video Feed for Direct In-Browser AR -->
+  <video id="ar-camera-video" playsinline autoplay muted style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 0; pointer-events: none;"></video>
+
+  <!-- Live In-Browser Camera AR Overlay Controls -->
+  <div id="browser-ar-hud" style="display: none;">
+    <div class="bar-top-ribbon">
+      <div class="bar-badge">📷 LIVE BROWSER CAMERA AR</div>
+      <button class="bar-exit-btn" id="exit-browser-ar-btn">✕ Exit AR</button>
+    </div>
+    <div class="bar-bottom-ribbon">
+      <button class="bar-btn" id="bar-tree-btn">🌲 Trees: <b id="bar-tree-txt">ON</b></button>
+      <button class="bar-btn" id="bar-scale-btn">📐 Scale: <b id="bar-scale-txt">1:1</b></button>
+      <button class="bar-btn" id="bar-recenter-btn">🔄 Center</button>
+    </div>
+    <div class="bar-hint">👆 Drag 1 finger to move • Pinch to resize • Move phone to look around</div>
+  </div>
+
+  <!-- Atmospheric Vignette -->
+  <div class="atmospheric-vignette"></div>
+
+  <!-- Binoculars Zoom Overlay -->
+  <div id="binocular-overlay">
+    <div class="binocular-grid">
+      <div class="binocular-text">FIELD OPTICS 12x50 • SCANNING HABITAT</div>
+    </div>
+  </div>
+
+  <!-- Hover Cursor Tooltip (Tracks Mouse) -->
+  <div id="hover-tooltip"></div>
+
+  <!-- Compass & Orientation Reset Ribbon -->
+  <div id="compass-container">
+    <span>COMPASS:</span>
+    <span id="compass-heading">000° N</span>
+    <button id="reset-orientation-btn" title="Reset View Forward (Press R)">
+      <span>🔄</span> Reset Orientation
+    </button>
+  </div>
+
+  <!-- Interactive Crosshair -->
+  <div class="crosshair">
+    <div class="crosshair-dot"></div>
+  </div>
+
+  <!-- Proximity Detection Inspect Prompt -->
+  <div id="inspect-prompt">
+    <span>🔍</span> Inspect Object [Click / Tap / Press E]
+  </div>
+
+  <!-- Main HUD Overlay -->
+  <div id="hud">
+    <!-- Top Bar -->
+    <div class="hud-top">
+      <div class="brand-badge">
+        <h1>🌲 Reveal the Hidden Forest</h1>
+        <p>3D Ecological Field Expedition</p>
+      </div>
+
+      <!-- Quest / Checklist Tracker -->
+      <div class="quest-tracker">
+        <div class="tracker-row">
+          <div class="tracker-label">🦌 Species Discovered</div>
+          <div class="tracker-pill" id="species-count">0 / 5</div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="species-progress"></div>
+        </div>
+
+        <div class="tracker-row" style="margin-top: 10px;">
+          <div class="tracker-label">⚠️ Threats Identified</div>
+          <div class="tracker-pill threats" id="threats-count">0 / 5</div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill threats" id="threats-progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Action Bar & Navigation Hints -->
+    <div class="hud-bottom">
+      <div class="controls-hint">
+        <div><span class="key-tag">W / ▲</span> Forward</div>
+        <div><span class="key-tag">S / ▼</span> Backward</div>
+        <div><span class="key-tag">A / D</span> Strafe</div>
+        <div><span class="key-tag">◄ / ►</span> Turn Camera</div>
+        <div><span class="key-tag">TRACKPAD</span> 2-Finger Swipe to Look</div>
+        <div><span class="key-tag">CLICK / E</span> Inspect</div>
+        <div><span class="key-tag">R</span> Reset View</div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="hud-btn ar-hud-btn" id="hud-ar-btn" title="View Royal Bengal Tiger in AR (T)">
+          <span>📱🐅</span> AR Tiger
+        </button>
+        <button class="hud-btn" id="binocular-btn" title="Toggle Binoculars (B)">
+          <span>🔭</span> Binoculars
+        </button>
+        <button class="hud-btn" id="journal-btn" title="Open Field Journal (J)">
+          <span>📋</span> Field Journal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Touch Virtual Controls -->
+  <div id="mobile-controls">
+    <div id="joystick-base">
+      <div id="joystick-knob"></div>
+    </div>
+  </div>
+  <button id="mobile-action-btn" title="Inspect Nearby Target">🔍</button>
+
+  <!-- Educational Field Journal Modal -->
+  <div class="modal-overlay" id="journal-modal">
+    <div class="journal-card" id="journal-card-content">
+      <!-- Populated dynamically via JS -->
+    </div>
+  </div>
+
+  <!-- Google ARCore Augmented Reality Experience Modal -->
+  <div class="modal-overlay" id="ar-experience-modal">
+    <div class="ar-card">
+      <!-- AR Header -->
+      <div class="ar-header">
+        <div class="ar-header-left">
+          <span class="ar-badge">GOOGLE ARCORE • WEBXR READY</span>
+          <h2 id="ar-title">🐅 Royal Bengal Tiger in AR</h2>
+          <p id="ar-subtitle">Place the life-size apex predator & its natural forest habitat on your physical floor</p>
+        </div>
+        <button class="journal-close-btn" id="close-ar-modal" title="Exit AR Viewer (Esc)">✕</button>
+      </div>
+
+      <!-- 3D / AR Viewport Container -->
+      <div class="ar-viewport-wrapper">
+        <model-viewer
+          id="ar-viewer"
+          src="assets/models/tiger.glb"
+          ar
+          ar-modes="scene-viewer webxr quick-look"
+          ar-scale="auto"
+          ar-placement="floor"
+          camera-controls
+          touch-action="pan-y"
+          shadow-intensity="1.4"
+          shadow-softness="0.75"
+          exposure="1.0"
+          environment-image="neutral"
+          alt="Royal Bengal Tiger in 3D Realistic Forest"
+        >
+          <!-- Native AR Launch Button -->
+          <button slot="ar-button" class="ar-camera-btn" id="ar-camera-btn">
+            <span>📱</span> Launch Camera AR
+          </button>
+
+          <!-- Fallback progress / loading bar -->
+          <div slot="progress-bar" class="ar-loading-bar">
+            <div class="ar-loading-fill"></div>
+          </div>
+        </model-viewer>
+
+        <!-- Dynamic Ambient Forest Backdrop Ring -->
+        <div class="ar-habitat-overlay active" id="ar-habitat-overlay">
+          <div class="ar-habitat-tag">🌲 Living Forest Clearing Active</div>
+        </div>
+      </div>
+
+      <!-- AR Interactive Controls Bar -->
+      <div class="ar-controls-bar">
+        <!-- Direct In-Browser Live Camera AR (Immune to Google app crashes) -->
+        <button class="ar-ctrl-btn camera-failsafe" id="ar-browser-camera-btn" title="Uses your mobile browser camera directly with zero Google app crashes">
+          <span class="ar-btn-icon">📷</span>
+          <span class="ar-btn-text">Live Camera AR (No Google Crash)</span>
+        </button>
+
+        <!-- Forest Trees Toggle -->
+        <button class="ar-ctrl-btn active" id="ar-tree-toggle-btn" title="Toggle realistic surrounding forest trees">
+          <span class="ar-btn-icon">🌲</span>
+          <span class="ar-btn-text">Forest Trees: <b id="ar-tree-status">ON</b></span>
+        </button>
+
+        <!-- Scale Toggle: 1:1 Life Size vs Tabletop -->
+        <button class="ar-ctrl-btn" id="ar-scale-toggle-btn" title="Toggle 1:1 true scale or miniature table scale">
+          <span class="ar-btn-icon">📐</span>
+          <span class="ar-btn-text">Scale: <b id="ar-scale-status">1:1 Life Size</b></span>
+        </button>
+
+        <!-- Direct ARCore Scene Viewer Intent for Android -->
+        <button class="ar-ctrl-btn primary" id="ar-direct-scene-btn" title="Open Google ARCore directly on mobile">
+          <span class="ar-btn-icon">✨</span>
+          <span class="ar-btn-text">Google Scene Viewer</span>
+        </button>
+      </div>
+
+      <!-- Desktop to Mobile QR Code Panel -->
+      <div class="ar-desktop-qr-box" id="ar-desktop-qr-box">
+        <div class="qr-content">
+          <div class="qr-code-img-wrap">
+            <img id="ar-qr-img" src="" alt="Scan QR Code to open in AR on Mobile" />
+          </div>
+          <div class="qr-instructions">
+            <h4>📱 View on Phone or Tablet (Android / iOS):</h4>
+            <p>Scan this QR code with your phone or tablet camera to place the <strong>Royal Bengal Tiger</strong> at 1:1 life-size scale right on your living room or classroom floor!</p>
+            <div class="qr-chips">
+              <span>✓ Google ARCore</span>
+              <span>✓ Depth Occlusion</span>
+              <span>✓ Ground Shadows</span>
+              <span>✓ No App Install Needed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome / Start Screen -->
+  <div id="start-screen">
+    <div class="start-box">
+      <div class="start-icon">🌲🦌</div>
+      <h1>Reveal the Hidden Forest</h1>
+      <p>
+        Step into an expansive, living woodland sanctuary. Walk through towering ancient canopies, sunlit glades, and mossy fallen logs.
+        <br><br>
+        <strong>How to Interact:</strong><br>
+        • Move with <strong>W, A, S, D</strong> and look around with your mouse.<br>
+        • <strong>Point & Click directly on any animal or threat</strong> to select and inspect it!<br>
+        • Press <strong>R</strong> (or click <strong>Reset Orientation</strong>) at any time to re-center your view.
+      </p>
+      <button class="btn-primary" id="start-btn">
+        <span>Enter Forest Expedition</span>
+        <span>➔</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Three.js (r128) - Local with CDN fallback -->
+  <script src="js/vendor/three.min.js"></script>
+  <script>window.THREE || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
+  <!-- Three.js GLTFLoader - Local with CDN fallback -->
+  <script src="js/vendor/GLTFLoader.js"></script>
+  <script>(window.THREE && window.THREE.GLTFLoader) || document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"><\/script>')</script>
+  <!-- Content Data (Species & Threats) -->
+  <script src="js/content-data.js?v=realistic3d"></script>
+  <!-- Embedded High-Fidelity 3D Deer Model (Zero CORS Risk) -->
+  <script src="js/deer-model-data.js?v=realistic3d"></script>
+  <!-- Embedded High-Fidelity 3D Species Models (Tiger, Peacock, Boar, Squirrel) -->
+  <script src="js/species-model-data.js?v=realistic3d"></script>
+  <!-- Embedded High-Fidelity 3D Threat Models (Zero CORS Risk) -->
+  <script src="js/threats-model-data.js?v=realistic3d"></script>
+  <!-- 3D Realistic Forest Engine -->
+  <script src="js/forest-engine.js?v=realistic3d"></script>
+
+</body>
+</html>
