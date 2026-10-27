@@ -85,7 +85,7 @@ class ForestWorld {
     );
     this.camera.position.copy(this.player.position);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1269,8 +1269,87 @@ class ForestWorld {
 
     const compassEl = document.getElementById("compass-heading");
     if (compassEl) {
-      compassEl.textContent = `${String(deg).padStart(3, "0")}° ${cardinal}`;
+      // Find active waypoint or closest undiscovered target
+      let target = this.activeWaypoint;
+      if (!target) {
+        let minDist = Infinity;
+        const allItems = [...FOREST_DATA.species, ...FOREST_DATA.threats];
+        for (const it of allItems) {
+          const isDone = this.discoveredSpecies.has(it.id) || this.discoveredThreats.has(it.id);
+          if (isDone) continue;
+          const dx = it.position.x - this.player.position.x;
+          const dz = it.position.z - this.player.position.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < minDist) {
+            minDist = d;
+            target = it;
+          }
+        }
+      }
+
+      if (target) {
+        const dx = target.position.x - this.player.position.x;
+        const dz = target.position.z - this.player.position.z;
+        const distM = Math.round(Math.sqrt(dx * dx + dz * dz));
+
+        let targetAngle = Math.atan2(dx, -dz);
+        let relAngle = targetAngle - this.player.yaw;
+        while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+        while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+
+        let arrowIcon = "⬆️";
+        if (relAngle > 0.3) arrowIcon = "↗️";
+        if (relAngle > 1.0) arrowIcon = "➡️";
+        if (relAngle > 2.0) arrowIcon = "↘️";
+        if (relAngle < -0.3) arrowIcon = "↖️";
+        if (relAngle < -1.0) arrowIcon = "⬅️";
+        if (relAngle < -2.0) arrowIcon = "↙️";
+        if (Math.abs(relAngle) > 2.7) arrowIcon = "⬇️";
+
+        compassEl.textContent = `${String(deg).padStart(3, "0")}° ${cardinal} • ${arrowIcon} ${target.icon} ${target.name} (${distM}m)`;
+      } else {
+        compassEl.textContent = `${String(deg).padStart(3, "0")}° ${cardinal} • All 10 Targets Logged! 🎉`;
+      }
     }
+  }
+
+  setWaypoint(targetId) {
+    const item = FOREST_DATA.species.find(s => s.id === targetId) || FOREST_DATA.threats.find(t => t.id === targetId);
+    if (!item) return;
+    this.activeWaypoint = item;
+    document.getElementById("journal-modal")?.classList.remove("open");
+    this.showExpeditionToast(`📍 Waypoint Set: ${item.icon} ${item.name} • Follow Compass!`);
+  }
+
+  fastTravelTo(targetId) {
+    const item = FOREST_DATA.species.find(s => s.id === targetId) || FOREST_DATA.threats.find(t => t.id === targetId);
+    if (!item) return;
+
+    document.getElementById("journal-modal")?.classList.remove("open");
+
+    const targetX = item.position.x;
+    const targetZ = item.position.z + 5.5;
+    const targetY = this.getTerrainHeight(targetX, targetZ) + this.player.height;
+
+    this.player.position.set(targetX, targetY, targetZ);
+    this.player.pitch = 0;
+    this.player.yaw = 0;
+    this.activeWaypoint = item;
+
+    this.showExpeditionToast(`🚀 Arrived at ${item.icon} ${item.name}! [Tap 🔍 to inspect]`);
+  }
+
+  showExpeditionToast(msg) {
+    let toast = document.getElementById("expedition-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "expedition-toast";
+      toast.className = "expedition-toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3500);
   }
 
   // -------------------------------------------------------------
@@ -1920,7 +1999,11 @@ class ForestWorld {
             <div style="font-weight: 700; font-size: 0.9rem;">${sp.name}</div>
             <div style="font-size: 0.75rem; color: #94a3b8;">${found ? '✓ Identified & Logged' : sp.discoveryClue}</div>
           </div>
-          <button class="checklist-ar-pill" data-id="${sp.id}" title="View ${sp.name} in AR">📱 AR</button>
+          <div class="checklist-actions">
+            <button class="checklist-btn track-btn" data-id="${sp.id}" title="Track on Compass">📍 Track</button>
+            <button class="checklist-btn goto-btn" data-id="${sp.id}" title="Fast-Travel Navigation">🚀 Go To</button>
+            <button class="checklist-btn ar-btn" data-id="${sp.id}" title="View in AR">📱 AR</button>
+          </div>
         </div>
       `;
     });
@@ -1940,7 +2023,11 @@ class ForestWorld {
             <div style="font-weight: 700; font-size: 0.9rem;">${th.name}</div>
             <div style="font-size: 0.75rem; color: #94a3b8;">${found ? '⚠️ Deactivated / Logged' : th.discoveryClue}</div>
           </div>
-          <button class="checklist-ar-pill threat" data-id="${th.id}" title="View ${th.name} in AR">📱 AR</button>
+          <div class="checklist-actions">
+            <button class="checklist-btn track-btn threat" data-id="${th.id}" title="Track on Compass">📍 Track</button>
+            <button class="checklist-btn goto-btn threat" data-id="${th.id}" title="Fast-Travel Navigation">🚀 Go To</button>
+            <button class="checklist-btn ar-btn threat" data-id="${th.id}" title="View in AR">📱 AR</button>
+          </div>
         </div>
       `;
     });
@@ -1953,7 +2040,21 @@ class ForestWorld {
       modal.classList.remove("open");
     });
 
-    card.querySelectorAll(".checklist-ar-pill").forEach(btn => {
+    card.querySelectorAll(".track-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.setWaypoint(btn.getAttribute("data-id"));
+      });
+    });
+
+    card.querySelectorAll(".goto-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.fastTravelTo(btn.getAttribute("data-id"));
+      });
+    });
+
+    card.querySelectorAll(".ar-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const id = btn.getAttribute("data-id");
@@ -2215,6 +2316,7 @@ class ForestWorld {
       if (this.terrainMesh) this.terrainMesh.visible = false;
       if (this.canopyGroup) this.canopyGroup.visible = false;
       if (this.atmosphericGroup) this.atmosphericGroup.visible = false;
+      if (this.skyMesh) this.skyMesh.visible = false; // 100% REMOVE VIRTUAL SKY DOME IN AR!
       if (this.scene.fog) {
         this.savedFog = this.scene.fog;
         this.scene.fog = null;
@@ -2246,21 +2348,21 @@ class ForestWorld {
     this.browserARGroup = new THREE.Group();
     this.browserARGroup.position.set(0, -0.65, -2.5);
 
-    // 1. Mossy clearing ground disk
-    const groundGeo = new THREE.CircleGeometry(1.8, 32);
+    // 1. Mossy clearing ground disk with soft feathered edges
+    const groundGeo = new THREE.CircleGeometry(2.4, 32);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
       map: this.textures.ground,
-      roughness: 0.9,
+      roughness: 0.92,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.88
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.receiveShadow = true;
     this.browserARGroup.add(ground);
 
-    // 2. Soft shadow receiver plane
-    const shadowGeo = new THREE.PlaneGeometry(3.5, 3.5);
+    // 2. Soft contact shadow receiver plane (casts real shadows onto room floor)
+    const shadowGeo = new THREE.PlaneGeometry(4.5, 4.5);
     shadowGeo.rotateX(-Math.PI / 2);
     const shadowMat = new THREE.ShadowMaterial({ opacity: 0.55 });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
@@ -2268,14 +2370,82 @@ class ForestWorld {
     shadowMesh.receiveShadow = true;
     this.browserARGroup.add(shadowMesh);
 
-    // 3. Surrounding bamboo & ferns
+    // 3. Rich surrounding forest environment (Canopy Bamboo, Mossy Boulders, Fallen Log, Ferns)
     this.arFoliageGroup = new THREE.Group();
-    const bMat = new THREE.MeshStandardMaterial({ map: this.textures.bark, roughness: 0.8 });
-    [-1.0, 1.0].forEach((bx, idx) => {
-      const bamboo = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 2.2, 6), bMat);
-      bamboo.position.set(bx, 1.1, -0.3 + idx * 0.2);
-      this.arFoliageGroup.add(bamboo);
+    const barkMat = new THREE.MeshStandardMaterial({ map: this.textures.bark, roughness: 0.88 });
+    const leafMat = new THREE.MeshStandardMaterial({
+      map: this.textures.leafCluster,
+      transparent: true,
+      alphaTest: 0.2,
+      side: THREE.DoubleSide
     });
+    const leafGeo = new THREE.PlaneGeometry(1.1, 1.1);
+
+    // 6 Clustered Bamboo Stalks with Layered Leaf Plumes
+    const bambooPositions = [
+      { x: -1.2, z: -0.4, h: 2.6 },
+      { x: -1.4, z: -0.8, h: 3.1 },
+      { x: -0.9, z: -1.1, h: 2.8 },
+      { x: 1.2, z: -0.3, h: 2.7 },
+      { x: 1.5, z: -0.7, h: 3.2 },
+      { x: 1.0, z: -1.2, h: 2.9 }
+    ];
+
+    bambooPositions.forEach(bp => {
+      const bMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, bp.h, 7), barkMat);
+      bMesh.position.set(bp.x, bp.h / 2, bp.z);
+      bMesh.castShadow = true;
+      this.arFoliageGroup.add(bMesh);
+
+      // Layered leaf plumes
+      for (let l = 0; l < 3; l++) {
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.set(bp.x + (l - 1) * 0.15, bp.h - 0.2 + l * 0.2, bp.z + (l - 1) * 0.15);
+        leaf.rotation.y = (l * Math.PI) / 3;
+        leaf.castShadow = true;
+        this.arFoliageGroup.add(leaf);
+      }
+    });
+
+    // 2 Mossy Limestone Boulders
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x5a6358, roughness: 0.95 });
+    const rock1 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 1), rockMat);
+    rock1.position.set(-1.15, 0.25, 0.2);
+    rock1.castShadow = true;
+    rock1.receiveShadow = true;
+    this.arFoliageGroup.add(rock1);
+
+    const rock2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35, 1), rockMat);
+    rock2.position.set(1.2, 0.2, 0.1);
+    rock2.castShadow = true;
+    rock2.receiveShadow = true;
+    this.arFoliageGroup.add(rock2);
+
+    // Weathered Fallen Woodland Log behind animal
+    const logGeo = new THREE.CylinderGeometry(0.18, 0.22, 2.2, 8);
+    logGeo.rotateZ(Math.PI / 2);
+    const logMesh = new THREE.Mesh(logGeo, barkMat);
+    logMesh.position.set(0, 0.18, -1.1);
+    logMesh.castShadow = true;
+    logMesh.receiveShadow = true;
+    this.arFoliageGroup.add(logMesh);
+
+    // Wild Broadleaf Ferns around rocks and log
+    const fernGeo = new THREE.PlaneGeometry(0.85, 0.85);
+    const fernPositions = [
+      { x: -0.9, y: 0.35, z: 0.1 },
+      { x: 0.95, y: 0.35, z: 0.2 },
+      { x: -0.6, y: 0.35, z: -0.9 },
+      { x: 0.6, y: 0.35, z: -0.9 }
+    ];
+    fernPositions.forEach(fp => {
+      const fern = new THREE.Mesh(fernGeo, leafMat);
+      fern.position.set(fp.x, fp.y, fp.z);
+      fern.rotation.y = Math.random() * Math.PI;
+      fern.castShadow = true;
+      this.arFoliageGroup.add(fern);
+    });
+
     this.browserARGroup.add(this.arFoliageGroup);
 
     // 4. Load 3D model (using base64 Blob URL for 100% offline & local file:// support)
@@ -2307,7 +2477,8 @@ class ForestWorld {
     const loader = new THREE.GLTFLoader();
     loader.load(modelSrc, (gltf) => {
       const tiger = gltf.scene;
-      tiger.scale.set(0.7, 0.7, 0.7);
+      const s = item.id === "tiger" ? 0.7 : (item.modelScale ? item.modelScale * 0.5 : 0.6);
+      tiger.scale.set(s, s, s);
       tiger.position.set(0, 0, 0);
       tiger.traverse(c => {
         if (c.isMesh) {
@@ -2334,6 +2505,26 @@ class ForestWorld {
       this.arLight.castShadow = true;
       this.scene.add(this.arLight);
     }
+  }
+
+  switchARItem(targetId) {
+    const found = FOREST_DATA.species.find(s => s.id === targetId) || FOREST_DATA.threats.find(t => t.id === targetId);
+    if (!found) return;
+
+    this.currentARItem = found;
+
+    // Update active state in switcher dock
+    document.querySelectorAll(".bar-dock-btn").forEach(btn => {
+      if (btn.getAttribute("data-id") === targetId) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+
+    // Rebuild habitat with the new 3D target!
+    this.setupBrowserARHabitat(found);
+    this.showExpeditionToast(`🌲 AR Target: ${found.icon} ${found.name}`);
   }
 
   setupBrowserARGestures() {
@@ -2376,7 +2567,15 @@ class ForestWorld {
       };
     }
 
-    // Touch drag to reposition tiger on floor
+    // Connect Universal Switcher buttons
+    document.querySelectorAll(".bar-dock-btn").forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        this.switchARItem(btn.getAttribute("data-id"));
+      };
+    });
+
+    // Touch drag to reposition tiger habitat on floor
     let touchStartX = 0;
     let touchStartY = 0;
     window.addEventListener("touchmove", (e) => {
@@ -2430,6 +2629,7 @@ class ForestWorld {
     if (this.terrainMesh) this.terrainMesh.visible = true;
     if (this.canopyGroup) this.canopyGroup.visible = true;
     if (this.atmosphericGroup) this.atmosphericGroup.visible = true;
+    if (this.skyMesh) this.skyMesh.visible = true; // RESTORE VIRTUAL SKY WHEN RETURNING!
     if (this.savedFog) {
       this.scene.fog = this.savedFog;
     }

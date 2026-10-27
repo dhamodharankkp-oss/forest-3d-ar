@@ -26,9 +26,26 @@ header('X-Frame-Options: SAMEORIGIN');
   <!-- Live In-Browser Camera AR Overlay Controls -->
   <div id="browser-ar-hud" style="display: none;">
     <div class="bar-top-ribbon">
-      <div class="bar-badge">📷 LIVE BROWSER CAMERA AR</div>
+      <div class="bar-badge">📷 LIVE CAMERA PASSTHROUGH AR</div>
       <button class="bar-exit-btn" id="exit-browser-ar-btn">✕ Exit AR</button>
     </div>
+
+    <!-- Universal AR Target Switcher Dock -->
+    <div class="bar-switcher-dock" id="bar-switcher-dock">
+      <span class="bar-dock-title">TARGET:</span>
+      <button class="bar-dock-btn active" data-id="tiger" title="Royal Bengal Tiger">🐅 Tiger</button>
+      <button class="bar-dock-btn" data-id="spotted_deer" title="Spotted Deer">🦌 Deer</button>
+      <button class="bar-dock-btn" data-id="peacock" title="Indian Peacock">🦚 Peacock</button>
+      <button class="bar-dock-btn" data-id="wild_boar" title="Indian Wild Boar">🐗 Boar</button>
+      <button class="bar-dock-btn" data-id="flying_squirrel" title="Flying Squirrel">🐿️ Squirrel</button>
+      <span class="bar-dock-divider">|</span>
+      <button class="bar-dock-btn threat" data-id="forest_fire" title="Forest Fire">🔥 Fire</button>
+      <button class="bar-dock-btn threat" data-id="wire_snare" title="Wire Snare">⛓️ Snare</button>
+      <button class="bar-dock-btn threat" data-id="plastic_trash" title="Plastic Trash">🚯 Trash</button>
+      <button class="bar-dock-btn threat" data-id="illegal_logging" title="Illegal Logging">🪓 Axe</button>
+      <button class="bar-dock-btn threat" data-id="chemical_waste" title="Chemical Waste">☣️ Waste</button>
+    </div>
+
     <div class="bar-bottom-ribbon">
       <button class="bar-btn" id="bar-tree-btn">🌲 Trees: <b id="bar-tree-txt">ON</b></button>
       <button class="bar-btn" id="bar-scale-btn">📐 Scale: <b id="bar-scale-txt">1:1</b></button>
