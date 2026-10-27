@@ -6,7 +6,9 @@ echo   Pushing 3D Forest and Bengal Tiger AR to GitHub...
 echo   Repository: https://github.com/dhamodharankkp-oss/forest-3d-ar
 echo ========================================================
 echo.
-git push -u origin main --force
+git add .
+git commit -m "update: latest forest 3D AR improvements" --allow-empty
+git push -u origin main
 echo.
 if %ERRORLEVEL% EQU 0 (
   echo ========================================================
